@@ -24,7 +24,8 @@ public class NorthPanel extends JPanel {
 	private static final int offsetX = 300;
 	private static final int offsetY = 200;
 	
-	private KnowledgeGraph knowledgeGraph = new KnowledgeGraph();
+//	private KnowledgeGraph knowledgeGraph = new KnowledgeGraph();
+	private KnowledgeGraphV3 knowledgeGraph = new KnowledgeGraphV3();
 //	private KnowledgeGraphV2 knowledgeGraph = new KnowledgeGraphV2();
 	
 	public void getNodes() {
