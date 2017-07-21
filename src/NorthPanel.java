@@ -20,13 +20,13 @@ public class NorthPanel extends JPanel {
 	
 	private static final int radius = 20;
 	private static final int loop = 10;
-	private static final int k = 200;
-	private static final int offsetX = 300;
-	private static final int offsetY = 200;
+	private static final int k = 100;
+	private static final int offsetX = 500;
+	private static final int offsetY = 300;
 	
 //	private KnowledgeGraph knowledgeGraph = new KnowledgeGraph();
-	private KnowledgeGraphV3 knowledgeGraph = new KnowledgeGraphV3();
-//	private KnowledgeGraphV2 knowledgeGraph = new KnowledgeGraphV2();
+//	private KnowledgeGraphV3 knowledgeGraph = new KnowledgeGraphV3();
+	private KnowledgeGraphV2 knowledgeGraph = new KnowledgeGraphV2();
 	
 	public void getNodes() {
 //		for (int i = 0; i < loop; i++) {

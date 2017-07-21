@@ -25,12 +25,12 @@ public class KnowledgeGraphV3 {
 	private final int normalLength_peacock_tesion = 100;
 	private final int normalLength_peacock_repulsion= 600;
 	private final int normalLength_peacock_hasNoRelation = 800;
-	private final double step_weight = 0.005;
-	private final double k_peacock = 10;
+//	private final double step_weight = 0.3;
+	private final double k_peacock = 1;
 	private final double g_peacock = 0.0005;
-	private final int limitDL_mutiply_loop_count = 100;
-	private final int max_loop_count = 1000;
-	private final double stable_nodes_percentage = 0.8;
+//	private final int limitDL_mutiply_loop_count = 50;
+//	private final int max_loop_count = 100;
+	private final double stable_nodes_percentage = 0.90;
 	
 //	private final int normalLength = 800;
 //	private final int normalLength_peacock = 800;
@@ -48,8 +48,8 @@ public class KnowledgeGraphV3 {
 	
 	static {
 		int oldNodeNum = 0;
-		int newNodeNum = 600;
-		int queryNodeNum = 6;
+		int newNodeNum = 100;
+		int queryNodeNum = 10;
 		
 		oldNodes = new ArrayList<>();
 		queryNodes = new ArrayList<>();
@@ -78,19 +78,36 @@ public class KnowledgeGraphV3 {
 			newNodes.add(node);
 		}
 		
-		//初始化边
-		num = 0;
-		for (int i = 0; i < queryNodeNum; i++) {
-		    for (int j = num; j < num+newNodeNum/queryNodeNum; j++) {
+		if (queryNodeNum != 0) {
+		  //初始化边
+	        num = 0;
+	        for (int j = num; j < num+newNodeNum/queryNodeNum; j++) {
 	            PageEdge edge = new PageEdge();
 	            edge.setId(j+"");
-	            edge.setSource(queryNodes.get(i).getId());
+	            edge.setSource(queryNodes.get(0).getId());
 	            edge.setTarget(newNodes.get(j).getId());
 	            relations.add(edge);
 	        }
-		    
-		    num += newNodeNum/queryNodeNum;
-        }
+	        
+	        num += newNodeNum/queryNodeNum;
+	        for (int i = 1; i < queryNodeNum; i++) {
+	            for (int j = num; j < num+newNodeNum/queryNodeNum; j++) {
+	                PageEdge edge = new PageEdge();
+	                edge.setId(j+"");
+	                edge.setSource(queryNodes.get(i).getId());
+	                edge.setTarget(newNodes.get(j).getId());
+	                relations.add(edge);
+	            }
+	            
+	            num += newNodeNum/queryNodeNum;
+	        }
+		}
+		
+//		PageEdge edge = new PageEdge();
+//		edge.setId("10000");
+//		edge.setSource("1");
+//		edge.setTarget("2");
+//		relations.add(edge);
 		
 		//初始化坐标
 		Iterator<PageNode> it;
@@ -138,21 +155,30 @@ public class KnowledgeGraphV3 {
 //		allNodes.addAll(oldNodes);
 	    
 	    int times = 0;
-	    double limitDl = 10;
+	    double limitDl = 1;
+	    int maxLoopCount;
+	    double stepWeight;
 	    
 	    long start = System.currentTimeMillis();
 	    Map<String, PageNode> idNodeMap = buildIdNodeMap(allNodes);
 	    Map<String, Set<PageNode>> oneDegreeMap = buildOneDegreeMap(idNodeMap, relations);
+	    int maxDegree = findMaxDegreeCount(oneDegreeMap);
+//	    if (allNodes.size() > 500) {
+            stepWeight = 5.0 / maxDegree;
+            maxLoopCount = 100000/allNodes.size();
+//        } else {
+//            stepWeight = 0.5;
+//        }
 	    List<CalCulateNode> calCulateMoveNodes = calculateMass(moveNodes, oneDegreeMap);
         List<CalCulateNode> calCulateAllNodes = calculateMass(allNodes, oneDegreeMap);
 	    
 	    long startTime = System.currentTimeMillis();
-//	    while (true) {
+	    while (true) {
 	    	times++;
             
-            if (times%limitDL_mutiply_loop_count == 0) {
-				limitDl *= 2;
-			}
+//            if (times%limitDL_mutiply_loop_count == 0) {
+//				limitDl *= 2;
+//			}
             System.out.println(times);
             System.out.println(limitDl);
             
@@ -169,15 +195,15 @@ public class KnowledgeGraphV3 {
 //            for (PageNode moveNode : moveNodes) {
 //				System.out.println(moveNode.getId()+": X:"+moveNode.getX()+" Y:"+moveNode.getY());
 //			}
-            List<Double> moveDistances = move(calCulateMoveNodes, totalForce);
+            List<Double> moveDistances = move(calCulateMoveNodes, totalForce, stepWeight);
 //            System.out.println("移动后的位置：");
 //            for (PageNode moveNode : moveNodes) {
 //				System.out.println(moveNode.getId()+": X:"+moveNode.getX()+" Y:"+moveNode.getY());
 //			}
-//            if (isConvergent(moveDistances, limitDl) || times > max_loop_count) {
-//				break;
-//			}
-//		}
+            if (isConvergent(moveDistances, limitDl) || times > maxLoopCount) {
+				break;
+			}
+		}
 	    long endTime = System.currentTimeMillis();
 	    System.out.println("Calculate mass cost:" + (startTime - start));
 	    System.out.println("Time cost:" + (endTime - startTime));
@@ -289,7 +315,7 @@ public class KnowledgeGraphV3 {
 		    forceX = 0;
 		    forceY = 0;
 		} else {
-			double f = -g_peacock * moveNode.getMass() * forceNode.getMass() * dl * dl;
+			double f = -g_peacock * moveNode.getMass() * forceNode.getMass() * dl * Math.sqrt(dl);
 			forceX = f * (moveNode.getPageNode().getX() - forceNode.getPageNode().getX()) / dl;
 			forceY = f * (moveNode.getPageNode().getY() - forceNode.getPageNode().getY()) / dl;
 		}
@@ -352,7 +378,7 @@ public class KnowledgeGraphV3 {
 		return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
 	}
 	
-	private List<Double> move(List<CalCulateNode> moveNodes, List<List<Double>> force) {
+	private List<Double> move(List<CalCulateNode> moveNodes, List<List<Double>> force, double stepWeight) {
 		
 		List<Double> totalForceX = force.get(0);
 		List<Double> totalForceY = force.get(1);
@@ -362,8 +388,8 @@ public class KnowledgeGraphV3 {
 			PageNode moveNode = moveNodes.get(i).getPageNode();
 			double forceX = totalForceX.get(i);
 			double forceY = totalForceY.get(i);
-			double dX = forceX * step_weight / moveNodes.get(i).getMass();
-			double dY = forceY * step_weight / moveNodes.get(i).getMass();
+			double dX = forceX * stepWeight / moveNodes.get(i).getMass();
+			double dY = forceY * stepWeight / moveNodes.get(i).getMass();
 			moveNode.setX(moveNode.getX() + dX);
 			moveNode.setY(moveNode.getY() + dY);
 			
@@ -435,6 +461,16 @@ public class KnowledgeGraphV3 {
             }
         }
         return oneDegreeMap;
+    }
+    
+    private int findMaxDegreeCount(Map<String, Set<PageNode>> oneDegreeMap) {
+        int max = 0;
+        for (Map.Entry<String, Set<PageNode>> entry : oneDegreeMap.entrySet()) {
+            if (entry.getValue().size() > max) {
+                max = entry.getValue().size();
+            }
+        }
+        return max;
     }
 	
 	public static void main(String[] args) {
